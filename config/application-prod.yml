@@ -1,0 +1,33 @@
+spring:
+  security:
+    oauth2:
+      authorizationserver:
+        issuer: http://auth-service:9000
+      resourceserver:
+        jwt:
+          issuer-uri: http://auth-service:9000
+
+app:
+  oauth2:
+    redirect-uri: ${OAUTH2_REDIRECT_URI}
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    prefer-ip-address: false
+
+logging:
+  level:
+    root: WARN
+    ru.mirea.docsa2: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    com.netflix: WARN
+

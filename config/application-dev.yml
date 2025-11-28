@@ -1,0 +1,21 @@
+spring:
+  security:
+    oauth2:
+      authorizationserver:
+        issuer: http://localhost:9000
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000
+
+app:
+  oauth2:
+    redirect-uri: http://localhost:8080/login/oauth2/code/shop-client
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: false
+    hostname: localhost
+

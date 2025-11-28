@@ -1,0 +1,318 @@
+x-common-config: &common-config
+  SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+
+x-common-eureka: &common-eureka
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+
+x-common-logging: &common-logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  auth-db:
+    image: postgres:15-alpine
+    container_name: shop-auth-db
+    command: postgres -c log_statement=none -c log_duration=off -c log_connections=off -c log_disconnections=off -c synchronous_commit=off
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      <<: *common-logging
+
+  product-db:
+    image: postgres:15-alpine
+    container_name: shop-product-db
+    command: postgres -c log_statement=none -c log_duration=off -c log_connections=off -c log_disconnections=off -c synchronous_commit=off
+    environment:
+      POSTGRES_DB: product_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - product-db-data:/var/lib/postgresql/data
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d product_db"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      <<: *common-logging
+
+  customer-db:
+    image: postgres:15-alpine
+    container_name: shop-customer-db
+    command: postgres -c log_statement=none -c log_duration=off -c log_connections=off -c log_disconnections=off -c synchronous_commit=off
+    environment:
+      POSTGRES_DB: customer_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - customer-db-data:/var/lib/postgresql/data
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d customer_db"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      <<: *common-logging
+
+  order-db:
+    image: postgres:15-alpine
+    container_name: shop-order-db
+    command: postgres -c log_statement=none -c log_duration=off -c log_connections=off -c log_disconnections=off -c synchronous_commit=off
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d order_db"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      <<: *common-logging
+
+  config-server:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-foksen/shop-microservices}-config-server:${IMAGE_TAG:-latest}
+    container_name: config-server
+    volumes:
+      - ../config:/app/config:ro
+    networks:
+      - shop-network
+    environment:
+      SPRING_PROFILES_ACTIVE: native,prod
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      <<: *common-logging
+    restart: unless-stopped
+
+  eureka-server:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-foksen/shop-microservices}-eureka-server:${IMAGE_TAG:-latest}
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    depends_on:
+      config-server:
+        condition: service_healthy
+    networks:
+      - shop-network
+    environment:
+      <<: *common-config
+      SPRING_PROFILES_ACTIVE: prod
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      <<: *common-logging
+    restart: unless-stopped
+
+  admin-server:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-foksen/shop-microservices}-admin-server:${IMAGE_TAG:-latest}
+    container_name: admin-server
+    ports:
+      - "9090:9090"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - shop-network
+    environment:
+      <<: [*common-config, *common-eureka]
+      SPRING_PROFILES_ACTIVE: prod
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      <<: *common-logging
+    restart: unless-stopped
+
+  auth-service:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-foksen/shop-microservices}-auth-service:${IMAGE_TAG:-latest}
+    container_name: auth-service
+    ports:
+      - "9000:9000"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - shop-network
+    environment:
+      <<: [*common-config, *common-eureka]
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      OAUTH2_REDIRECT_URI: ${OAUTH2_REDIRECT_URI}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      <<: *common-logging
+    restart: unless-stopped
+
+  api-gateway:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-foksen/shop-microservices}-api-gateway:${IMAGE_TAG:-latest}
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - shop-network
+    environment:
+      <<: [*common-config, *common-eureka]
+      SPRING_PROFILES_ACTIVE: prod
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      <<: *common-logging
+    restart: unless-stopped
+
+  product-service:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-foksen/shop-microservices}-product-service:${IMAGE_TAG:-latest}
+    container_name: product-service
+    depends_on:
+      product-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - shop-network
+    environment:
+      <<: [*common-config, *common-eureka]
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/product_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      <<: *common-logging
+    restart: unless-stopped
+
+  customer-service:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-foksen/shop-microservices}-customer-service:${IMAGE_TAG:-latest}
+    container_name: customer-service
+    depends_on:
+      customer-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - shop-network
+    environment:
+      <<: [*common-config, *common-eureka]
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://customer-db:5432/customer_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      <<: *common-logging
+    restart: unless-stopped
+
+  order-service:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-foksen/shop-microservices}-order-service:${IMAGE_TAG:-latest}
+    container_name: order-service
+    depends_on:
+      order-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      customer-service:
+        condition: service_healthy
+    networks:
+      - shop-network
+    environment:
+      <<: [*common-config, *common-eureka]
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/order_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      <<: *common-logging
+    restart: unless-stopped
+
+networks:
+  shop-network:
+    driver: bridge
+
+volumes:
+  auth-db-data:
+  product-db-data:
+  customer-db-data:
+  order-db-data:
+
