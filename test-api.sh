@@ -1,50 +1,28 @@
 #!/bin/bash
-
 set -e
 
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
 RED='\033[0;31m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 BASE_URL="http://localhost:8080"
 AUTH_URL="http://localhost:9000"
 
-echo "==============================================="
-echo "Testing Shop Microservices API"
-echo "==============================================="
-echo ""
-
-echo -e "${YELLOW}Setting up port-forwarding...${NC}"
-pkill -f "kubectl port-forward" 2>/dev/null || true
-sleep 2
-
-kubectl port-forward -n shop-system svc/krakend 8080:8080 > /tmp/krakend-pf.log 2>&1 &
-KRAKEND_PID=$!
-kubectl port-forward -n shop-system svc/auth-service 9000:9000 > /tmp/auth-pf.log 2>&1 &
-AUTH_PID=$!
-kubectl port-forward -n shop-system svc/grafana 3000:3000 > /tmp/grafana-pf.log 2>&1 &
-kubectl port-forward -n shop-system svc/jaeger-ui 16686:16686 > /tmp/jaeger-pf.log 2>&1 &
-kubectl port-forward -n shop-system svc/prometheus-server 9090:9090 > /tmp/prometheus-pf.log 2>&1 &
-
-echo "Waiting for port-forwarding to be ready..."
-sleep 10
-
-if ! timeout 10 curl -s http://localhost:8080/__health > /dev/null 2>&1; then
-    echo -e "${RED}KrakenD port-forward failed${NC}"
-    exit 1
+if ! curl -s http://localhost:8080/__health >/dev/null 2>&1; then
+    pkill -f "kubectl port-forward" 2>/dev/null || true
+    sleep 2
+    
+    kubectl port-forward -n shop-system svc/krakend 8080:8080 >/dev/null 2>&1 &
+    kubectl port-forward -n shop-system svc/auth-service 9000:9000 >/dev/null 2>&1 &
+    kubectl port-forward -n shop-system svc/grafana 3000:3000 >/dev/null 2>&1 &
+    kubectl port-forward -n shop-system svc/jaeger-ui 16686:16686 >/dev/null 2>&1 &
+    kubectl port-forward -n shop-system svc/prometheus-server 9090:9090 >/dev/null 2>&1 &
+    
+    sleep 10
 fi
 
-if ! timeout 10 curl -s http://localhost:9000/actuator/health > /dev/null 2>&1; then
-    echo -e "${RED}Auth-service port-forward failed${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}Port-forwarding ready${NC}"
-echo ""
-
-echo -e "${GREEN}Starting tests...${NC}"
+echo "Testing API..."
 echo ""
 
 FAILED_TESTS=0
