@@ -54,7 +54,7 @@ env:
   GRAYLOG_HOST: graylog
   GRAYLOG_PORT: "12201"
   OAUTH2_REDIRECT_URI: http://localhost:8080/authorized
-  SPRING_SECURITY_OAUTH2_AUTHORIZATIONSERVER_ISSUER: http://localhost:9000
+  SPRING_SECURITY_OAUTH2_AUTHORIZATIONSERVER_ISSUER: http://auth-service:9000
 
 postgresql:
   host: auth-db-postgresql

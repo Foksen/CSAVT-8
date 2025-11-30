@@ -40,11 +40,14 @@
     {
       "endpoint": "/auth/users",
       "method": "POST",
+      "output_encoding": "no-op",
+      "input_headers": ["Content-Type"],
       "backend": [
         {
           "url_pattern": "/users",
           "host": ["auth-service:9000"],
-          "method": "POST"
+          "method": "POST",
+          "encoding": "no-op"
         }
       ]
     },
@@ -75,11 +78,13 @@
     {
       "endpoint": "/products",
       "method": "GET",
+      "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/products",
           "host": ["product-service:8081"],
-          "method": "GET"
+          "method": "GET",
+          "encoding": "no-op"
         }
       ],
       "extra_config": {
@@ -92,11 +97,14 @@
     {
       "endpoint": "/products",
       "method": "POST",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "Content-Type"],
       "backend": [
         {
           "url_pattern": "/products",
           "host": ["product-service:8081"],
-          "method": "POST"
+          "method": "POST",
+          "encoding": "no-op"
         }
       ]
     },
@@ -118,7 +126,8 @@
         {
           "url_pattern": "/products/{id}",
           "host": ["product-service:8081"],
-          "method": "PUT"
+          "method": "PUT",
+          "encoding": "no-op"
         }
       ]
     },
@@ -129,7 +138,8 @@
         {
           "url_pattern": "/products/{id}",
           "host": ["product-service:8081"],
-          "method": "DELETE"
+          "method": "DELETE",
+          "encoding": "no-op"
         }
       ]
     },
@@ -147,11 +157,14 @@
     {
       "endpoint": "/customers",
       "method": "POST",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "Content-Type"],
       "backend": [
         {
           "url_pattern": "/customers",
           "host": ["customer-service:8082"],
-          "method": "POST"
+          "method": "POST",
+          "encoding": "no-op"
         }
       ]
     },
@@ -180,11 +193,14 @@
     {
       "endpoint": "/orders",
       "method": "POST",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "Content-Type"],
       "backend": [
         {
           "url_pattern": "/orders",
           "host": ["order-service:8083"],
-          "method": "POST"
+          "method": "POST",
+          "encoding": "no-op"
         }
       ],
       "extra_config": {

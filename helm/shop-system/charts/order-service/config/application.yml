@@ -47,8 +47,6 @@ management:
   tracing:
     sampling:
       probability: 1.0
-    exclude:
-      - /actuator/**
   otlp:
     tracing:
       endpoint: ${JAEGER_ENDPOINT}

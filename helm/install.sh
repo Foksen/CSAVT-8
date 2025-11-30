@@ -105,9 +105,11 @@ kubectl port-forward -n shop-system svc/krakend 8080:8080 > /tmp/krakend-pf.log 
 kubectl port-forward -n shop-system svc/auth-service 9000:9000 > /tmp/auth-pf.log 2>&1 &
 kubectl port-forward -n shop-system svc/grafana 3000:3000 > /tmp/grafana-pf.log 2>&1 &
 kubectl port-forward -n shop-system svc/jaeger-ui 16686:16686 > /tmp/jaeger-pf.log 2>&1 &
-kubectl port-forward -n shop-system svc/prometheus 9090:9090 > /tmp/prometheus-pf.log 2>&1 &
+kubectl port-forward -n shop-system svc/prometheus-server 9090:9090 > /tmp/prometheus-pf.log 2>&1 &
 
-sleep 3
+echo "Waiting for port-forwarding to be ready..."
+sleep 5
+
 echo ""
 echo -e "${GREEN}Services available at:${NC}"
 echo "  KrakenD:    http://localhost:8080"

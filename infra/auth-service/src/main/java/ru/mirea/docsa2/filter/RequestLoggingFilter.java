@@ -19,8 +19,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         
-        String method = request.getMethod();
         String url = request.getRequestURI();
+        
+        if (url.startsWith("/actuator/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
+        String method = request.getMethod();
         String ip = getClientIP(request);
         
         MDC.put("http.method", method);

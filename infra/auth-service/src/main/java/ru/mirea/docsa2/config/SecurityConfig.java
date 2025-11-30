@@ -90,6 +90,7 @@ public class SecurityConfig {
             .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
             .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
             .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+            .scope("shop-api")
             .scope("read")
             .scope("write")
             .tokenSettings(TokenSettings.builder()
@@ -136,9 +137,10 @@ public class SecurityConfig {
     public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
         return context -> {
             if (context.getTokenType().getValue().equals("access_token")) {
-                UserDetails userDetails = (UserDetails) context.getPrincipal().getPrincipal();
-                if (userDetails instanceof ShopUserDetails shopUserDetails) {
-                    context.getClaims().claim("userId", shopUserDetails.getId());
+                if (context.getPrincipal().getPrincipal() instanceof UserDetails userDetails) {
+                    if (userDetails instanceof ShopUserDetails shopUserDetails) {
+                        context.getClaims().claim("userId", shopUserDetails.getId());
+                    }
                 }
             }
         };

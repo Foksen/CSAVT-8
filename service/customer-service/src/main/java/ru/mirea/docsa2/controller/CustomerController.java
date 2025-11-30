@@ -66,10 +66,7 @@ public class CustomerController {
 
     @PostMapping
     public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CreateCustomerRequest request, Authentication authentication) {
-        Long userId = AuthenticationUtil.extractUserId(authentication);
-        if (userId == null) {
-            return ResponseEntity.badRequest().build();
-        }
+        Long userId = request.userId();
         
         if (customerRepository.findByUserId(userId).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
