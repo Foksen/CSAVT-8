@@ -4,6 +4,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 public record CreateOrderRequest(
+    @NotNull(message = "Customer ID is required")
+    Long customerId,
+
     @NotNull(message = "Product ID is required")
     Long productId,
 

@@ -1,0 +1,60 @@
+replicaCount: 1
+
+nameOverride: "customer-service"
+fullnameOverride: "customer-service"
+
+image:
+  repository: shop-customer-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 8082
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 60
+
+probes:
+  liveness:
+    path: /actuator/health/liveness
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    path: /actuator/health/readiness
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  startup:
+    path: /actuator/health
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+env:
+  DB_HOST: customer-db-postgresql
+  KAFKA_BOOTSTRAP_SERVERS: kafka-kafka:9092
+  JAEGER_ENDPOINT: http://jaeger-collector:4318/v1/traces
+  GRAYLOG_HOST: graylog
+  GRAYLOG_PORT: "12201"
+
+postgresql:
+  database: customer_db
+  username: postgres
+  password: postgres
+

@@ -1,0 +1,48 @@
+image:
+  repository: postgres
+  tag: "15-alpine"
+  pullPolicy: IfNotPresent
+
+persistence:
+  enabled: true
+  storageClass: "standard"
+  size: 1Gi
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+metrics:
+  enabled: true
+  image:
+    repository: prometheuscommunity/postgres-exporter
+    tag: latest
+
+databases:
+  - name: auth-db
+    database: auth_db
+    port: 5432
+  - name: product-db
+    database: product_db
+    port: 5432
+  - name: customer-db
+    database: customer_db
+    port: 5432
+  - name: order-db
+    database: order_db
+    port: 5432
+
+auth:
+  username: postgres
+  password: postgres
+  metricsUser: metrics
+  metricsPassword: metrics
+
+config:
+  maxConnections: 100
+  sharedBuffers: 128MB
+

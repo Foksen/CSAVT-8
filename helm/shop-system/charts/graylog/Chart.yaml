@@ -1,0 +1,9 @@
+apiVersion: v2
+name: graylog
+description: Graylog External Service (pointing to Docker container)
+type: application
+version: 0.1.0
+
+
+
+

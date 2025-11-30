@@ -1,0 +1,27 @@
+image:
+  repository: jaegertracing/all-in-one
+  tag: "1.52"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  # OTLP gRPC port
+  otlpGrpcPort: 4317
+  # OTLP HTTP port
+  otlpHttpPort: 4318
+  # Jaeger UI port
+  uiPort: 16686
+  # Zipkin compatible port
+  zipkinPort: 9411
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+
+
+

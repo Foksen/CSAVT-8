@@ -1,0 +1,20 @@
+{{- range .Values.databases }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}-postgresql
+  labels:
+    app: {{ .name }}-postgresql
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: {{ .port }}
+    targetPort: postgresql
+    protocol: TCP
+    name: postgresql
+  selector:
+    app: {{ .name }}-postgresql
+{{- end }}
+

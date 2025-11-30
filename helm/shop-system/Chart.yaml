@@ -1,0 +1,46 @@
+apiVersion: v2
+name: shop-system
+description: E-commerce microservices system with Kafka, Redis, PostgreSQL
+type: application
+version: 0.1.0
+appVersion: "0.0.1-SNAPSHOT"
+maintainers:
+  - name: MIREA DOCSA-2
+dependencies:
+  - name: auth-service
+    version: 0.1.0
+    repository: file://./charts/auth-service
+  - name: product-service
+    version: 0.1.0
+    repository: file://./charts/product-service
+  - name: customer-service
+    version: 0.1.0
+    repository: file://./charts/customer-service
+  - name: order-service
+    version: 0.1.0
+    repository: file://./charts/order-service
+  - name: postgresql
+    version: 0.1.0
+    repository: file://./charts/postgresql
+  - name: redis
+    version: 0.1.0
+    repository: file://./charts/redis
+  - name: kafka
+    version: 0.1.0
+    repository: file://./charts/kafka
+  - name: krakend
+    version: 0.1.0
+    repository: file://./charts/krakend
+  - name: graylog
+    version: 0.1.0
+    repository: file://./charts/graylog
+  - name: jaeger
+    version: 0.1.0
+    repository: file://./charts/jaeger
+  - name: prometheus
+    version: 0.1.0
+    repository: file://./charts/prometheus
+  - name: grafana
+    version: 0.1.0
+    repository: file://./charts/grafana
+

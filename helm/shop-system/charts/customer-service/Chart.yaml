@@ -1,0 +1,7 @@
+apiVersion: v2
+name: customer-service
+description: Customer Management Service
+type: application
+version: 0.1.0
+appVersion: "0.0.1-SNAPSHOT"
+

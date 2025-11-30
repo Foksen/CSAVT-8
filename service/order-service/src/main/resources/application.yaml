@@ -2,7 +2,7 @@ spring:
   application:
     name: order-service
   config:
-    import: ${SPRING_CONFIG_IMPORT:configserver:http://localhost:8888}
+    import: optional:file:/app/config/,optional:file:./config/
 
 server:
   port: 8083

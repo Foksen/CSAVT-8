@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+  repository: devopsfaith/krakend
+  tag: "2.5"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 8080
+  nodePort: 30080
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 60
+
+probes:
+  liveness:
+    path: /__health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readiness:
+    path: /__health
+    initialDelaySeconds: 5
+    periodSeconds: 5
+

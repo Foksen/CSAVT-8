@@ -1,0 +1,8 @@
+externalService:
+  enabled: true
+  # IP host-машины (будет доступен через host.minikube.internal)
+  gelfPort: 12201
+
+
+
+

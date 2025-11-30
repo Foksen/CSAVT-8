@@ -1,7 +1,9 @@
 package ru.mirea.docsa2.controller;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,14 +20,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import ru.mirea.docsa2.client.CustomerClient;
-import ru.mirea.docsa2.client.ProductClient;
-import ru.mirea.docsa2.dto.CustomerDto;
 import ru.mirea.docsa2.dto.CreateOrderRequest;
 import ru.mirea.docsa2.dto.OrderResponse;
-import ru.mirea.docsa2.dto.ProductDto;
+import ru.mirea.docsa2.event.CustomerValidationResponse;
+import ru.mirea.docsa2.event.OrderCreatedEvent;
+import ru.mirea.docsa2.event.ProductValidationResponse;
 import ru.mirea.docsa2.model.Order;
+import ru.mirea.docsa2.producer.OrderEventProducer;
 import ru.mirea.docsa2.repository.OrderRepository;
+import ru.mirea.docsa2.service.ValidationService;
 import ru.mirea.docsa2.util.AuthenticationUtil;
 
 @Slf4j
@@ -35,8 +38,8 @@ import ru.mirea.docsa2.util.AuthenticationUtil;
 public class OrderController {
 
     private final OrderRepository orderRepository;
-    private final ProductClient productClient;
-    private final CustomerClient customerClient;
+    private final ValidationService validationService;
+    private final OrderEventProducer orderEventProducer;
 
     @GetMapping
     public List<OrderResponse> getAllOrders() {
@@ -62,60 +65,46 @@ public class OrderController {
 
     @GetMapping("/self")
     public ResponseEntity<?> getSelfOrders(Authentication authentication) {
-        try {
-            Long userId = AuthenticationUtil.extractUserId(authentication);
-            if (userId == null) {
-                return ResponseEntity.badRequest().body("User ID not found in token");
-            }
-
-            CustomerDto customer = customerClient.getCustomerByUserId(userId);
-            if (customer == null) {
-                return ResponseEntity.badRequest().body("Customer not found for current user");
-            }
-
-            List<OrderResponse> orders = orderRepository.findByCustomerId(customer.id()).stream()
-                    .map(OrderResponse::from)
-                    .toList();
-
-            return ResponseEntity.ok(orders);
-        } catch (Exception e) {
-            log.error("Error fetching user orders", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error fetching orders: " + e.getMessage());
+        Long userId = AuthenticationUtil.extractUserId(authentication);
+        if (userId == null) {
+            return ResponseEntity.badRequest().body("User ID not found in token");
         }
+
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body("Self orders endpoint requires customer lookup - implement via event sourcing");
     }
 
     @PostMapping
     public ResponseEntity<?> createOrder(@Valid @RequestBody CreateOrderRequest request, Authentication authentication) {
         try {
             String username = AuthenticationUtil.extractUsername(authentication);
-            Long userId = AuthenticationUtil.extractUserId(authentication);
+            log.info("User '{}' is creating order for product {}", username, request.productId());
+
+            CompletableFuture<ProductValidationResponse> productValidation = 
+                validationService.validateProduct(request.productId(), request.quantity());
             
-            if (userId == null) {
-                return ResponseEntity.badRequest().body("User ID not found in token");
-            }
-            
-            log.info("User '{}' (ID: {}) is creating order for product {}", 
-                username, userId, request.productId());
+            CompletableFuture<CustomerValidationResponse> customerValidation = 
+                validationService.validateCustomer(request.customerId());
 
-            CustomerDto customer = customerClient.getCustomerByUserId(userId);
-            if (customer == null) {
-                return ResponseEntity.badRequest().body("Customer not found for current user");
-            }
+            CompletableFuture.allOf(productValidation, customerValidation).join();
 
-            ProductDto product = productClient.getProductById(request.productId());
-            if (product == null) {
-                return ResponseEntity.badRequest().body("Product not found");
+            ProductValidationResponse productResponse = productValidation.get();
+            CustomerValidationResponse customerResponse = customerValidation.get();
+
+            if (productResponse == null || !productResponse.valid()) {
+                String error = productResponse != null ? productResponse.errorMessage() : "Product validation timeout";
+                return ResponseEntity.badRequest().body(error);
             }
 
-            if (product.quantity() < request.quantity()) {
-                return ResponseEntity.badRequest().body("Insufficient product quantity");
+            if (customerResponse == null || !customerResponse.valid()) {
+                String error = customerResponse != null ? customerResponse.errorMessage() : "Customer validation timeout";
+                return ResponseEntity.badRequest().body(error);
             }
 
-            BigDecimal totalPrice = product.price().multiply(BigDecimal.valueOf(request.quantity()));
+            BigDecimal totalPrice = productResponse.price().multiply(BigDecimal.valueOf(request.quantity()));
             
             Order order = new Order();
-            order.setCustomerId(customer.id());
+            order.setCustomerId(request.customerId());
             order.setProductId(request.productId());
             order.setQuantity(request.quantity());
             order.setTotalPrice(totalPrice);
@@ -123,6 +112,16 @@ public class OrderController {
 
             Order saved = orderRepository.save(order);
             log.info("Order created successfully: {}", saved.getId());
+
+            OrderCreatedEvent event = new OrderCreatedEvent(
+                saved.getId(),
+                saved.getCustomerId(),
+                saved.getProductId(),
+                saved.getQuantity(),
+                saved.getTotalPrice(),
+                LocalDateTime.now()
+            );
+            orderEventProducer.sendOrderCreatedEvent(event);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(OrderResponse.from(saved));
         } catch (Exception e) {

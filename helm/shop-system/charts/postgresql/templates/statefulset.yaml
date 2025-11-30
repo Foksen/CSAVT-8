@@ -1,0 +1,163 @@
+{{- range .Values.databases }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .name }}-postgresql
+  labels:
+    app: {{ .name }}-postgresql
+spec:
+  serviceName: {{ .name }}-postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .name }}-postgresql
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}-postgresql
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+    spec:
+      restartPolicy: Always
+      initContainers:
+      - name: init-db
+        image: {{ $.Values.image.repository }}:{{ $.Values.image.tag }}
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /var/lib/postgresql/data
+          chown -R 999:999 /var/lib/postgresql/data
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+      containers:
+      - name: postgresql
+        image: {{ $.Values.image.repository }}:{{ $.Values.image.tag }}
+        ports:
+        - containerPort: 5432
+          name: postgresql
+        env:
+        - name: POSTGRES_DB
+          value: {{ .database | quote }}
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: METRICS_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: metrics-username
+        - name: METRICS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: metrics-password
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - sh
+              - -c
+              - |
+                sleep 5
+                until pg_isready -U postgres -d {{ .database }}; do sleep 1; done
+                psql -U postgres -d {{ .database }} -c "CREATE USER ${METRICS_USER} WITH PASSWORD '${METRICS_PASSWORD}';" || true
+                psql -U postgres -d {{ .database }} -c "GRANT pg_monitor TO ${METRICS_USER};" || true
+        args:
+        - -c
+        - max_connections={{ $.Values.config.maxConnections }}
+        - -c
+        - shared_buffers={{ $.Values.config.sharedBuffers }}
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+            - -d
+            - {{ .database }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+            - -d
+            - {{ .database }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+            - -d
+            - {{ .database }}
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        resources:
+          limits:
+            cpu: {{ $.Values.resources.limits.cpu }}
+            memory: {{ $.Values.resources.limits.memory }}
+          requests:
+            cpu: {{ $.Values.resources.requests.cpu }}
+            memory: {{ $.Values.resources.requests.memory }}
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+{{- if $.Values.metrics.enabled }}
+      - name: metrics
+        image: {{ $.Values.metrics.image.repository }}:{{ $.Values.metrics.image.tag }}
+        ports:
+        - containerPort: 9187
+          name: metrics
+        command:
+        - sh
+        - -c
+        - |
+          export DATA_SOURCE_NAME="postgresql://${METRICS_USER}:${METRICS_PASSWORD}@localhost:5432/{{ .database }}?sslmode=disable"
+          /bin/postgres_exporter
+        env:
+        - name: METRICS_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: metrics-username
+        - name: METRICS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: metrics-password
+{{- end }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: {{ $.Values.persistence.storageClass }}
+      resources:
+        requests:
+          storage: {{ $.Values.persistence.size }}
+{{- end }}
+

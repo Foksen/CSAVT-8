@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: krakend-config
+  labels:
+    app: krakend
+data:
+  krakend.json: |
+{{ .Files.Get "config/krakend.json" | indent 4 }}
+

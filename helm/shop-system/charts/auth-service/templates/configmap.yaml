@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "auth-service.fullname" . }}
+  labels:
+    app: {{ include "auth-service.name" . }}
+    chart: {{ include "auth-service.chart" . }}
+    release: {{ .Release.Name }}
+data:
+  DB_HOST: {{ .Values.env.DB_HOST | quote }}
+  REDIS_HOST: {{ .Values.env.REDIS_HOST | quote }}
+  REDIS_PORT: {{ .Values.env.REDIS_PORT | quote }}
+  JAEGER_ENDPOINT: {{ .Values.env.JAEGER_ENDPOINT | quote }}
+  GRAYLOG_HOST: {{ .Values.env.GRAYLOG_HOST | quote }}
+  GRAYLOG_PORT: {{ .Values.env.GRAYLOG_PORT | quote }}
+  OAUTH2_REDIRECT_URI: {{ .Values.env.OAUTH2_REDIRECT_URI | quote }}
+  SPRING_SECURITY_OAUTH2_AUTHORIZATIONSERVER_ISSUER: {{ .Values.env.SPRING_SECURITY_OAUTH2_AUTHORIZATIONSERVER_ISSUER | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "auth-service.fullname" . }}-config
+  labels:
+    app: {{ include "auth-service.name" . }}
+    chart: {{ include "auth-service.chart" . }}
+    release: {{ .Release.Name }}
+data:
+  application.yml: |
+{{ tpl (.Files.Get "config/application.yml") . | indent 4 }}
+  auth-service.yml: |
+{{ tpl (.Files.Get "config/auth-service.yml") . | indent 4 }}
+

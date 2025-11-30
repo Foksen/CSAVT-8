@@ -1,0 +1,35 @@
+image:
+  repository: grafana/grafana
+  tag: "10.2.2"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 3000
+  nodePort: 30300
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+persistence:
+  enabled: true
+  storageClass: "standard"
+  size: 2Gi
+
+admin:
+  user: admin
+  password: admin
+
+datasources:
+  prometheus:
+    name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090
+    access: proxy
+    isDefault: true
+

@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "auth-service.fullname" . }}
+  labels:
+    app: {{ include "auth-service.name" . }}
+    chart: {{ include "auth-service.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "auth-service.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "auth-service.name" . }}
+        release: {{ .Release.Name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.port }}
+          protocol: TCP
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: DB_HOST
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: REDIS_PORT
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: postgres-username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: postgres-password
+        - name: JAEGER_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: JAEGER_ENDPOINT
+        - name: GRAYLOG_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: GRAYLOG_HOST
+        - name: GRAYLOG_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: GRAYLOG_PORT
+        - name: OAUTH2_REDIRECT_URI
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: OAUTH2_REDIRECT_URI
+        - name: SPRING_SECURITY_OAUTH2_AUTHORIZATIONSERVER_ISSUER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: SPRING_SECURITY_OAUTH2_AUTHORIZATIONSERVER_ISSUER
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://{{ .Values.env.DB_HOST }}:5432/{{ .Values.postgresql.database }}"
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: postgres-username
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "auth-service.fullname" . }}
+              key: postgres-password
+        - name: SPRING_DATA_REDIS_HOST
+          value: "{{ .Values.env.REDIS_HOST }}"
+        - name: SPRING_DATA_REDIS_PORT
+          value: "{{ .Values.env.REDIS_PORT }}"
+        - name: APP_OAUTH2_REDIRECT_URI
+          value: "{{ .Values.env.OAUTH2_REDIRECT_URI }}"
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.probes.liveness.path }}
+            port: http
+          initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+          failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.probes.readiness.path }}
+            port: http
+          initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+          failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+        startupProbe:
+          httpGet:
+            path: {{ .Values.probes.startup.path }}
+            port: http
+          initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+          timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
+          failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+        resources:
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "auth-service.fullname" . }}-config
+

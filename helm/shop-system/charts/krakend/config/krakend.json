@@ -1,0 +1,209 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.5/krakend.json",
+  "version": 3,
+  "name": "Shop Microservices API Gateway",
+  "timeout": "30s",
+  "cache_ttl": "5m",
+  "port": 8080,
+  "extra_config": {
+    "telemetry/logging": {
+      "level": "INFO",
+      "prefix": "[KRAKEND]",
+      "syslog": false,
+      "stdout": true,
+      "format": "json"
+    },
+    "telemetry/metrics": {
+      "collection_time": "30s",
+      "listen_address": ":8090"
+    },
+    "security/cors": {
+      "allow_origins": ["*"],
+      "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "allow_headers": ["*"],
+      "expose_headers": ["Content-Length"],
+      "max_age": "12h"
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/auth/users",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/users",
+          "host": ["auth-service:9000"],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/auth/users",
+      "method": "POST",
+      "backend": [
+        {
+          "url_pattern": "/users",
+          "host": ["auth-service:9000"],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/auth/users/{id}",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/users/{id}",
+          "host": ["auth-service:9000"],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/auth/oauth2/token",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/oauth2/token",
+          "host": ["auth-service:9000"],
+          "method": "POST",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/products",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/products",
+          "host": ["product-service:8081"],
+          "method": "GET"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "client_max_rate": 10
+        }
+      }
+    },
+    {
+      "endpoint": "/products",
+      "method": "POST",
+      "backend": [
+        {
+          "url_pattern": "/products",
+          "host": ["product-service:8081"],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/products/{id}",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/products/{id}",
+          "host": ["product-service:8081"],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/products/{id}",
+      "method": "PUT",
+      "backend": [
+        {
+          "url_pattern": "/products/{id}",
+          "host": ["product-service:8081"],
+          "method": "PUT"
+        }
+      ]
+    },
+    {
+      "endpoint": "/products/{id}",
+      "method": "DELETE",
+      "backend": [
+        {
+          "url_pattern": "/products/{id}",
+          "host": ["product-service:8081"],
+          "method": "DELETE"
+        }
+      ]
+    },
+    {
+      "endpoint": "/customers",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/customers",
+          "host": ["customer-service:8082"],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/customers",
+      "method": "POST",
+      "backend": [
+        {
+          "url_pattern": "/customers",
+          "host": ["customer-service:8082"],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/customers/{id}",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/customers/{id}",
+          "host": ["customer-service:8082"],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/orders",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/orders",
+          "host": ["order-service:8083"],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/orders",
+      "method": "POST",
+      "backend": [
+        {
+          "url_pattern": "/orders",
+          "host": ["order-service:8083"],
+          "method": "POST"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 50,
+          "client_max_rate": 5
+        }
+      }
+    },
+    {
+      "endpoint": "/orders/{id}",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/orders/{id}",
+          "host": ["order-service:8083"],
+          "method": "GET"
+        }
+      ]
+    }
+  ]
+}
